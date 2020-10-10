@@ -1,155 +1,89 @@
 package brickbreaker;
 
-
 import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Graphics;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
-import java.util.ArrayList;
-import java.util.List;
 
-import javax.swing.JPanel;
+public class Paddle {
 
-public class BrickBreakerPanel extends JPanel implements MouseListener, MouseMotionListener, Runnable {
-
-	private boolean insidePanel, gameOver, gameWon;
-	private Paddle paddle;
-	private int mouseX;
-	Thread thread;
+	private int x;
+	final int YPOS = 550, WIDTH = 100, HEIGHT = 20, SPEED = 10;
 	private Ball ball;
-	private List<Brick> bricks;
-	private long startTime, stopTime;
 
-	public BrickBreakerPanel() {
-		super(null, true);
-		this.setPreferredSize(new Dimension(800, 600)); // enables JFrame to use
-														// size
-		System.out.println("Width: " + this.getWidth());
-		System.out.println("Height: " + this.getHeight());
-		this.addMouseListener(this);
-		this.addMouseMotionListener(this);
-		insidePanel = false;
-		gameOver = false;
-		gameWon = false;
-		ball = new Ball();
-		paddle = new Paddle(ball);
-		mouseX = 0;
-		this.createBricks();
-		thread = new Thread(this);
-		thread.start();
+	public Paddle(Ball b) {
+		x = (800 - WIDTH) / 2;
+		ball = b;
 	}
 
-	public void createBricks() {
-		bricks = new ArrayList<Brick>();
-		double temp = 40;
-		for (int i = 0; i < 4; i++) { // was 12
-			bricks.add(new Brick(ball, (int) temp));
-			temp += Brick.WIDTH + 40;
+	public void move(int mouseX) {
+		mouseX = mouseX - 50;
+		int diff = Math.abs(x - mouseX);
+		if (mouseX > this.x) { // going right
+			if (diff < 5)
+				x = mouseX;
+			else
+				x += SPEED;
+		} else if (mouseX < this.x) { // going left
+			if (diff < 5)
+				x = mouseX;
+			else
+				x -= SPEED;
 		}
+		checkOutsideBounds();
 	}
 
-	public void paintComponent(Graphics g) {
-		// background
-		g.setColor(Color.black);
-		g.fillRect(0, 0, 800, 600);
-
-		if (!gameOver) {
-			// draw objects
-			paddle.draw(g);
-			ball.draw(g);
-			for (Brick b : bricks) {
-				b.draw(g);
-			}
-		} else if (gameOver && !gameWon) {
-			g.setColor(Color.red);
-			g.setFont(new Font("TimesRoman", Font.BOLD, 28)); 
-			g.drawString("GAME OVER", 330, 300);
-		} else {
-			g.setColor(Color.red);
-			double time = Math.round(stopTime - startTime) / 1000.0;
-			g.setFont(new Font("TimesRoman", Font.BOLD, 28)); 
-			g.drawString("GAME Completed in " + time + " seconds.", 170, 300);
-		}
-
-	}
-
-	public void run() {
-		while (true) {
-			paddle.move(mouseX);
-			ball.move();
-			paddle.checkBallCollision();
-			for (int i = 0; i < bricks.size(); i++) {
-				if (bricks.get(i).checkBallCollision()) {
-					bricks.remove(i);
-					i--;
-				}
-			}
-			checkGameOver();
-			repaint();
-			try {
-				Thread.sleep(15);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+	/**
+	 * Called during each iteration of the run() method. Determines if the ball has
+	 * collided with the paddle. If a collision occurs, the ball's x-velocity is
+	 * altered.
+	 */
+	public void checkBallCollision() {
+		int ballX = ball.getX() + 10;
+		if (ball.getY() >= 530 && ball.getY() <= 534) {
+			if (ballX > this.x && ballX < this.x + 100) {
+				ball.reverseYVelocity();
+				alterXVelocity();
 			}
 		}
 	}
 
-	private void checkGameOver() {
-		if (!gameOver) {
-			if (ball.getY() > 600) {
-				gameOver = true;
-				ball.setXVel(0);
-				ball.setYVel(0);
-				stopTime = System.currentTimeMillis();
-			}
-			if (bricks.isEmpty()) {
-				stopTime = System.currentTimeMillis();
-				gameWon = true;
-				gameOver = true;
-			}
-		}
+	/**
+	 * Alters the x-velocity of the ball according to where the ball strikes the
+	 * paddle.
+	 */
+	public void alterXVelocity() {
+		int ballX = ball.getX() + 10;
+		if (ballX >= x && ballX < x + 10)
+			ball.setXVel(-6);
+		if (ballX >= x + 10 && ballX < x + 20)
+			ball.setXVel(-4);
+		if (ballX >= x + 20 && ballX < x + 30)
+			ball.setXVel(-3);
+		if (ballX >= x + 30 && ballX < x + 40)
+			ball.setXVel(-2);
+		if (ballX >= x + 40 && ballX < x + 60)
+			ball.setXVel(0);
+		if (ballX >= x + 60 && ballX < x + 70)
+			ball.setXVel(2);
+		if (ballX >= x + 60 && ballX < x + 80)
+			ball.setXVel(3);
+		if (ballX >= x + 80 && ballX < x + 90)
+			ball.setXVel(4);
+		if (ballX >= x + 90 && ballX < x + 100)
+			ball.setXVel(6);
 
+		System.out.println("Collision occured");
+		System.out.println("Ball xVel = " + ball.getXVel());
 	}
 
-	public void mouseClicked(MouseEvent mouse) {
-		if (!ball.isMoving()) {
-			ball.startMoving();
-			startTime = System.currentTimeMillis();
-		}
-		if (gameOver) {
-			ball = new Ball();
-			paddle = new Paddle(ball);
-			createBricks();
-			gameOver = false;
-			gameWon = false;
-		}
+	private void checkOutsideBounds() {
+		if (x < 0)
+			x = 0;
+		if (x > 700)
+			x = 700;
 	}
 
-	public void mouseEntered(MouseEvent mouse) {
-
+	public void draw(Graphics g) {
+		g.setColor(Color.white);
+		g.fillRect(x, YPOS, WIDTH, HEIGHT);
 	}
-
-	public void mouseExited(MouseEvent arg0) {
-		insidePanel = false;
-	}
-
-	public void mousePressed(MouseEvent arg0) {
-
-	}
-
-	public void mouseReleased(MouseEvent arg0) {
-
-	}
-
-	public void mouseDragged(MouseEvent arg0) {
-
-	}
-
-	public void mouseMoved(MouseEvent mouse) {
-		mouseX = mouse.getX();
-	}
-
 }
